@@ -22,16 +22,44 @@
 
 #include "candidate.hpp"
 
+#include <sstream>
+
 namespace rtc {
 
 Candidate::Candidate(const string &candidate, const string &mid)
     : mCandidate(candidate), mMid(mid) {}
+
+Candidate::Type Candidate::type() const {
+	std::istringstream iss(mCandidate);
+	string token;
+	while (iss >> token && token != "typ") {
+	}
+	if (!(iss >> token))
+		return Type::Unknown;
+	if (token == "host")
+		return Type::Host;
+	if (token == "srflx")
+		return Type::ServerReflexive;
+	if (token == "prflx")
+		return Type::PeerReflexive;
+	if (token == "relay")
+		return Type::Relayed;
+	return Type::Unknown;
+}
 
 string Candidate::candidate() const { return mCandidate; }
 
 string Candidate::mid() const { return mMid; }
 
 Candidate::operator string() const { return "a=" + mCandidate; }
+
+optional<string> Candidate::address() const {
+	std::istringstream iss(mCandidate);
+	string foundation, component, transport, priority, address;
+	if (iss >> foundation >> component >> transport >> priority >> address)
+		return address;
+	return nullopt;
+}
 
 } // namespace rtc
 

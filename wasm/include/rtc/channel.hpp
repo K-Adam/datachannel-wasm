@@ -51,6 +51,8 @@ public:
 
 	virtual void setBufferedAmountLowThreshold(size_t amount);
 
+	void resetCallbacks();
+
 protected:
 	virtual void triggerOpen();
 	virtual void triggerClosed();
@@ -59,11 +61,11 @@ protected:
 	virtual void triggerBufferedAmountLow();
 
 private:
-	std::function<void()> mOpenCallback;
-	std::function<void()> mClosedCallback;
-	std::function<void(string error)> mErrorCallback;
-	std::function<void(message_variant data)> mMessageCallback;
-	std::function<void()> mBufferedAmountLowCallback;
+	callback_holder<> mOpenCallback;
+	callback_holder<> mClosedCallback;
+	callback_holder<string> mErrorCallback;
+	callback_holder<message_variant> mMessageCallback;
+	callback_holder<> mBufferedAmountLowCallback;
 };
 
 } // namespace rtc

@@ -91,6 +91,7 @@ public:
 	SignalingState signalingState() const;
 	optional<Description> localDescription() const;
 	optional<Description> remoteDescription() const;
+	optional<string> remoteAddress() const;
 
 	shared_ptr<DataChannel> createDataChannel(const string &label, DataChannelInit init = {});
 
@@ -108,6 +109,8 @@ public:
 	void onGatheringStateChange(std::function<void(GatheringState state)> callback);
 	void onSignalingStateChange(std::function<void(SignalingState state)> callback);
 
+	void resetCallbacks();
+
 protected:
 	void triggerDataChannel(shared_ptr<DataChannel> dataChannel);
 	void triggerLocalDescription(const Description &description);
@@ -117,13 +120,13 @@ protected:
 	void triggerGatheringStateChange(GatheringState state);
 	void triggerSignalingStateChange(SignalingState state);
 
-	std::function<void(shared_ptr<DataChannel>)> mDataChannelCallback;
-	std::function<void(const Description &description)> mLocalDescriptionCallback;
-	std::function<void(const Candidate &candidate)> mLocalCandidateCallback;
-	std::function<void(State state)> mStateChangeCallback;
-	std::function<void(IceState state)> mIceStateChangeCallback;
-	std::function<void(GatheringState state)> mGatheringStateChangeCallback;
-	std::function<void(SignalingState state)> mSignalingStateChangeCallback;
+	callback_holder<shared_ptr<DataChannel>> mDataChannelCallback;
+	callback_holder<const Description &> mLocalDescriptionCallback;
+	callback_holder<const Candidate &> mLocalCandidateCallback;
+	callback_holder<State> mStateChangeCallback;
+	callback_holder<IceState> mIceStateChangeCallback;
+	callback_holder<GatheringState> mGatheringStateChangeCallback;
+	callback_holder<SignalingState> mSignalingStateChangeCallback;
 
 private:
 	int mId;

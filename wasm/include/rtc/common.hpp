@@ -25,6 +25,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -57,6 +58,24 @@ template <class... Ts> struct overloaded : Ts... {
 	using Ts::operator()...;
 };
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
+// Keeps the function behind a shared pointer so that a callback can reset or replace itself
+// while it runs
+template <typename... Args> class callback_holder {
+public:
+	callback_holder &operator=(std::function<void(Args...)> func) {
+		mFunc = std::make_shared<std::function<void(Args...)>>(std::move(func));
+		return *this;
+	}
+
+	void operator()(Args... args) const {
+		if (auto func = mFunc; func && *func)
+			(*func)(std::forward<Args>(args)...);
+	}
+
+private:
+	shared_ptr<std::function<void(Args...)>> mFunc;
+};
 
 } // namespace rtc
 

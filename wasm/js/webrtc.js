@@ -321,6 +321,15 @@
 			return type;
 		},
 
+		rtcGetRemoteAddress: function(pc) {
+			if(!pc) return 0;
+			var sctp = WEBRTC.peerConnectionsMap[pc].sctp;
+			var iceTransport = sctp && sctp.transport && sctp.transport.iceTransport;
+			var pair = iceTransport && iceTransport.getSelectedCandidatePair && iceTransport.getSelectedCandidatePair();
+			if(!pair || !pair.remote || !pair.remote.address) return 0;
+			return stringToNewUTF8(pair.remote.address + ':' + pair.remote.port);
+		},
+
 		rtcCreateDataChannel: function(pc, pLabel, unordered, maxRetransmits, maxPacketLifeTime, negotiated, id, pProtocol) {
 			if(!pc) return 0;
 			var label = UTF8ToString(pLabel);

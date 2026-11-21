@@ -29,10 +29,14 @@ namespace rtc {
 
 class Candidate {
 public:
+	enum class Type { Unknown, Host, ServerReflexive, PeerReflexive, Relayed };
+
 	Candidate(const string &candidate, const string &mid);
+	Type type() const;
 	string candidate() const;
 	string mid() const;
 	operator string() const;
+	optional<string> address() const;
 
 private:
 	string mCandidate;

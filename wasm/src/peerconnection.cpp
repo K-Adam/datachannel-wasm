@@ -40,6 +40,7 @@ extern char *rtcGetLocalDescription(int pc);
 extern char *rtcGetLocalDescriptionType(int pc);
 extern char *rtcGetRemoteDescription(int pc);
 extern char *rtcGetRemoteDescriptionType(int pc);
+extern char *rtcGetRemoteAddress(int pc);
 extern int rtcCreateDataChannel(int pc, const char *label, bool unordered, int maxRetransmits,
                                 int maxPacketLifeTime, bool negotiated, int id,
                                 const char *protocol);
@@ -221,6 +222,19 @@ optional<Description> PeerConnection::remoteDescription() const {
 	return description;
 }
 
+optional<string> PeerConnection::remoteAddress() const {
+	if (!mId)
+		return std::nullopt;
+
+	char *address = rtcGetRemoteAddress(mId);
+	if (!address)
+		return std::nullopt;
+
+	string result(address);
+	free(address);
+	return result;
+}
+
 shared_ptr<DataChannel> PeerConnection::createDataChannel(const string &label,
                                                           DataChannelInit init) {
 	if (!mId)
@@ -303,43 +317,46 @@ void PeerConnection::onSignalingStateChange(function<void(SignalingState state)>
 	mSignalingStateChangeCallback = callback;
 }
 
+void PeerConnection::resetCallbacks() {
+	mDataChannelCallback = nullptr;
+	mLocalDescriptionCallback = nullptr;
+	mLocalCandidateCallback = nullptr;
+	mStateChangeCallback = nullptr;
+	mIceStateChangeCallback = nullptr;
+	mGatheringStateChangeCallback = nullptr;
+	mSignalingStateChangeCallback = nullptr;
+}
+
 void PeerConnection::triggerDataChannel(shared_ptr<DataChannel> dataChannel) {
-	if (mDataChannelCallback)
-		mDataChannelCallback(dataChannel);
+	mDataChannelCallback(dataChannel);
 }
 
 void PeerConnection::triggerLocalDescription(const Description &description) {
-	if (mLocalDescriptionCallback)
-		mLocalDescriptionCallback(description);
+	mLocalDescriptionCallback(description);
 }
 
 void PeerConnection::triggerLocalCandidate(const Candidate &candidate) {
-	if (mLocalCandidateCallback)
-		mLocalCandidateCallback(candidate);
+	mLocalCandidateCallback(candidate);
 }
 
 void PeerConnection::triggerStateChange(State state) {
 	mState = state;
-	if (mStateChangeCallback)
-		mStateChangeCallback(state);
+	mStateChangeCallback(state);
 }
 
 void PeerConnection::triggerIceStateChange(IceState state) {
 	mIceState = state;
-	if (mIceStateChangeCallback)
-		mIceStateChangeCallback(state);
+	mIceStateChangeCallback(state);
 }
 
 void PeerConnection::triggerGatheringStateChange(GatheringState state) {
 	mGatheringState = state;
-	if (mGatheringStateChangeCallback)
-		mGatheringStateChangeCallback(state);
+	mGatheringStateChangeCallback(state);
 }
 
 void PeerConnection::triggerSignalingStateChange(SignalingState state) {
 	mSignalingState = state;
-	if (mSignalingStateChangeCallback)
-		mSignalingStateChangeCallback(state);
+	mSignalingStateChangeCallback(state);
 }
 
 std::ostream &operator<<(std::ostream &out, PeerConnection::State state) {

@@ -55,29 +55,32 @@ void Channel::onBufferedAmountLow(std::function<void()> callback) {
 void Channel::setBufferedAmountLowThreshold(size_t amount) { /* Dummy */
 }
 
+void Channel::resetCallbacks() {
+	mOpenCallback = nullptr;
+	mClosedCallback = nullptr;
+	mErrorCallback = nullptr;
+	mMessageCallback = nullptr;
+	mBufferedAmountLowCallback = nullptr;
+}
+
 void Channel::triggerOpen() {
-	if (mOpenCallback)
-		mOpenCallback();
+	mOpenCallback();
 }
 
 void Channel::triggerClosed() {
-	if (mClosedCallback)
-		mClosedCallback();
+	mClosedCallback();
 }
 
 void Channel::triggerError(string error) {
-	if (mErrorCallback)
-		mErrorCallback(std::move(error));
+	mErrorCallback(std::move(error));
 }
 
-void Channel::triggerMessage(const message_variant data) {
-	if (mMessageCallback)
-		mMessageCallback(data);
+void Channel::triggerMessage(message_variant data) {
+	mMessageCallback(std::move(data));
 }
 
 void Channel::triggerBufferedAmountLow() {
-	if (mBufferedAmountLowCallback)
-		mBufferedAmountLowCallback();
+	mBufferedAmountLowCallback();
 }
 
 } // namespace rtc
