@@ -512,6 +512,12 @@
 			return stringToNewUTF8(WEBRTC.dataChannelsMap[dc].protocol);
 		},
 
+		rtcGetDataChannelClosed: function(dc) {
+			var dataChannel = WEBRTC.dataChannelsMap[dc];
+			// libdatachannel reports a channel as closed as soon as close is called
+			return !dataChannel || dataChannel.readyState == 'closing' || dataChannel.readyState == 'closed';
+		},
+
 		rtcGetDataChannelUnordered: function(dc) {
 			if(!dc) return 0;
 			var dataChannel = WEBRTC.dataChannelsMap[dc];
@@ -538,8 +544,9 @@
 				var userPointer = dataChannel.rtcUserPointer || 0;
 				{{{ makeDynCall('vi', 'openCallback') }}} (userPointer);
 			};
-			dataChannel.onopen = cb;
+			// An already open channel may or may not still deliver its open event
 			if(dataChannel.readyState == 'open') setTimeout(cb, 0);
+			else dataChannel.onopen = cb;
 		},
 
 		rtcSetErrorCallback: function(dc, errorCallback) {
@@ -548,7 +555,8 @@
 			var cb = function(evt) {
 				if(dataChannel.rtcUserDeleted) return;
 				var userPointer = dataChannel.rtcUserPointer || 0;
-				var pError = evt.message ? stringToNewUTF8(evt.message) : 0;
+				var message = (evt.error && evt.error.message) || evt.message;
+				var pError = message ? stringToNewUTF8(message) : 0;
 				{{{ makeDynCall('vii', 'errorCallback') }}} (pError, userPointer);
 				_free(pError);
 			};

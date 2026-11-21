@@ -35,6 +35,7 @@ extern void rtcCloseDataChannel(int dc);
 extern int rtcGetDataChannelLabel(int dc, char *buffer, int size);
 extern int rtcGetDataChannelId(int dc);
 extern char *rtcGetDataChannelProtocol(int dc);
+extern bool rtcGetDataChannelClosed(int dc);
 extern int rtcGetDataChannelUnordered(int dc);
 extern int rtcGetDataChannelMaxPacketLifeTime(int dc);
 extern int rtcGetDataChannelMaxRetransmits(int dc);
@@ -132,7 +133,7 @@ bool DataChannel::send(const byte *data, size_t size) {
 
 bool DataChannel::isOpen() const { return mConnected; }
 
-bool DataChannel::isClosed() const { return mId == 0; }
+bool DataChannel::isClosed() const { return rtcGetDataChannelClosed(mId); }
 
 size_t DataChannel::bufferedAmount() const {
 	if (!mId)
