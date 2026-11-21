@@ -180,7 +180,7 @@
 			},
 		},
 
-		rtcCreatePeerConnection: function(pUrls, pUsernames, pPasswords, nIceServers) {
+		rtcCreatePeerConnection: function(pUrls, pUsernames, pPasswords, nIceServers, relayOnly) {
 			if(!window.RTCPeerConnection) return 0;
 			var iceServers = [];
 			for(var i = 0; i < nIceServers; ++i) {
@@ -201,8 +201,14 @@
 			}
 			var config = {
 				iceServers: iceServers,
+				iceTransportPolicy: relayOnly ? 'relay' : 'all',
 			};
-			return WEBRTC.registerPeerConnection(new RTCPeerConnection(config));
+			try {
+				return WEBRTC.registerPeerConnection(new RTCPeerConnection(config));
+			} catch(err) {
+				console.error(err);
+				return 0;
+			}
 		},
 
 		rtcDeletePeerConnection: function(pc) {

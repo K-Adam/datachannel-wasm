@@ -55,8 +55,48 @@ struct IceServer {
 	RelayType relayType;
 };
 
+struct ProxyServer {
+	enum class Type { Http, Socks5 };
+
+	ProxyServer(Type type_, string hostname_, uint16_t port_);
+	ProxyServer(Type type_, string hostname_, uint16_t port_, string username_, string password_);
+
+	Type type;
+	string hostname;
+	uint16_t port;
+	optional<string> username;
+	optional<string> password;
+};
+
+enum class CertificateType { Default, Ecdsa, Rsa };
+
+enum class TransportPolicy { All, Relay };
+
+// Mirrors libdatachannel so the same code compiles for both targets. Fields a browser cannot
+// honor are ignored.
 struct Configuration {
 	std::vector<IceServer> iceServers;
+	optional<ProxyServer> proxyServer;
+	optional<string> bindAddress;
+
+	CertificateType certificateType = CertificateType::Default;
+	TransportPolicy iceTransportPolicy = TransportPolicy::All;
+	bool enableIceTcp = false;
+	bool enableIceUdpMux = false;
+	bool disableAutoNegotiation = false;
+	bool disableAutoGathering = false;
+	bool forceMediaTransport = false;
+	bool disableFingerprintVerification = false;
+
+	uint16_t portRangeBegin = 1024;
+	uint16_t portRangeEnd = 65535;
+
+	optional<size_t> mtu;
+	optional<size_t> maxMessageSize;
+
+	optional<string> certificatePemFile;
+	optional<string> keyPemFile;
+	optional<string> keyPemPass;
 };
 
 } // namespace rtc

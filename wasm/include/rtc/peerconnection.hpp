@@ -75,7 +75,7 @@ public:
 	};
 
 	PeerConnection();
-	PeerConnection(const Configuration &config);
+	PeerConnection(Configuration config);
 	~PeerConnection();
 
 	void close();
