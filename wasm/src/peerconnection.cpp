@@ -32,7 +32,9 @@
 extern "C" {
 extern int rtcCreatePeerConnection(const char **pUrls, const char **pUsernames,
                                    const char **pPasswords, int nIceServers, bool relayOnly,
-                                   bool disableAutoNegotiation);
+                                   bool disableAutoNegotiation, bool disableAutoGathering);
+extern void rtcGatherLocalCandidates(int pc, const char **pUrls, const char **pUsernames,
+                                     const char **pPasswords, int nIceServers);
 extern void rtcDeletePeerConnection(int pc);
 extern char *rtcGetLocalDescription(int pc);
 extern char *rtcGetLocalDescriptionType(int pc);
@@ -63,6 +65,46 @@ namespace rtc {
 
 using std::function;
 using std::vector;
+
+namespace {
+
+string iceServerUrl(const IceServer &iceServer) {
+	if (iceServer.type == IceServer::Type::Dummy)
+		return iceServer.hostname;
+
+	string url = iceServer.type != IceServer::Type::Turn
+	                 ? "stun"
+	                 : iceServer.relayType == IceServer::RelayType::TurnTls ? "turns" : "turn";
+	url += ":" + iceServer.hostname;
+
+	if (iceServer.port != 0)
+		url += ":" + std::to_string(iceServer.port);
+
+	if (iceServer.type == IceServer::Type::Turn &&
+	    iceServer.relayType != IceServer::RelayType::TurnUdp)
+		url += "?transport=tcp";
+
+	return url;
+}
+
+template <typename F> auto withIceServers(const vector<IceServer> &iceServers, F func) {
+	vector<string> urls;
+	vector<const char *> url_ptrs;
+	vector<const char *> username_ptrs;
+	vector<const char *> password_ptrs;
+	// Reserved so the pointers taken below are not invalidated by a reallocation
+	urls.reserve(iceServers.size());
+	for (const IceServer &iceServer : iceServers) {
+		urls.push_back(iceServerUrl(iceServer));
+		url_ptrs.push_back(urls.back().c_str());
+		username_ptrs.push_back(iceServer.username.c_str());
+		password_ptrs.push_back(iceServer.password.c_str());
+	}
+	return func(url_ptrs.data(), username_ptrs.data(), password_ptrs.data(),
+	            int(iceServers.size()));
+}
+
+} // namespace
 
 void PeerConnection::DataChannelCallback(int dc, void *ptr) {
 	PeerConnection *p = static_cast<PeerConnection *>(ptr);
@@ -109,46 +151,12 @@ void PeerConnection::SignalingStateChangeCallback(int state, void *ptr) {
 PeerConnection::PeerConnection() : PeerConnection(Configuration()) {}
 
 PeerConnection::PeerConnection(Configuration config) {
-	vector<string> urls;
-	urls.reserve(config.iceServers.size());
-	for (const IceServer &iceServer : config.iceServers) {
-		string url;
-		if (iceServer.type == IceServer::Type::Dummy) {
-			url = iceServer.hostname;
-		} else {
-			string scheme =
-			    iceServer.type == IceServer::Type::Turn
-			        ? (iceServer.relayType == IceServer::RelayType::TurnTls ? "turns" : "turn")
-			        : "stun";
-
-			url += scheme + ":" + iceServer.hostname;
-
-			if (iceServer.port != 0)
-				url += string(":") + std::to_string(iceServer.port);
-
-			if (iceServer.type == IceServer::Type::Turn &&
-			    iceServer.relayType != IceServer::RelayType::TurnUdp)
-				url += "?transport=tcp";
-		}
-		urls.push_back(url);
-	}
-
-	vector<const char *> url_ptrs;
-	vector<const char *> username_ptrs;
-	vector<const char *> password_ptrs;
-	url_ptrs.reserve(config.iceServers.size());
-	username_ptrs.reserve(config.iceServers.size());
-	password_ptrs.reserve(config.iceServers.size());
-	for (const string &s : urls)
-		url_ptrs.push_back(s.c_str());
-	for (const IceServer &iceServer : config.iceServers) {
-		username_ptrs.push_back(iceServer.username.c_str());
-		password_ptrs.push_back(iceServer.password.c_str());
-	}
-	mId = rtcCreatePeerConnection(url_ptrs.data(), username_ptrs.data(), password_ptrs.data(),
-	                              config.iceServers.size(),
-	                              config.iceTransportPolicy == TransportPolicy::Relay,
-	                              config.disableAutoNegotiation);
+	mId = withIceServers(config.iceServers, [&](const char **urls, const char **usernames,
+	                                            const char **passwords, int count) {
+		return rtcCreatePeerConnection(urls, usernames, passwords, count,
+		                               config.iceTransportPolicy == TransportPolicy::Relay,
+		                               config.disableAutoNegotiation, config.disableAutoGathering);
+	});
 	if (!mId)
 		throw std::runtime_error("Peer connection creation failed");
 
@@ -241,6 +249,16 @@ void PeerConnection::setLocalDescription(Description::Type type, LocalDescriptio
 
 	rtcSetLocalDescription(mId, Description::typeToString(type).c_str(),
 	                       init.iceUfrag.value_or("").c_str(), init.icePwd.value_or("").c_str());
+}
+
+void PeerConnection::gatherLocalCandidates(vector<IceServer> additionalIceServers) {
+	if (!mId)
+		throw std::runtime_error("Peer connection is closed");
+
+	withIceServers(additionalIceServers, [this](const char **urls, const char **usernames,
+	                                            const char **passwords, int count) {
+		rtcGatherLocalCandidates(mId, urls, usernames, passwords, count);
+	});
 }
 
 void PeerConnection::setRemoteDescription(const Description &description) {

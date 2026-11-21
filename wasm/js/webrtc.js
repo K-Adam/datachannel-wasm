@@ -78,6 +78,9 @@
 					? peerConnection.signalingState == 'have-remote-offer'
 					: type != 'offer';
 				var state = peerConnection.signalingState;
+				var pending = peerConnection.rtcPendingDescription;
+				// The browser state does not show that a held back answer already covers the remote offer
+				if(answering && pending && pending.type == 'answer') return;
 				// libdatachannel does not fail the connection for a type that does not fit the state
 				if(answering ? state != 'have-remote-offer' && state != 'have-local-pranswer' : state != 'stable') {
 					console.warn('Ignoring local description of type ' + type + ' in signaling state ' + state);
@@ -96,16 +99,23 @@
 							sdp = sdp.replace(/^a=ice-ufrag:.*$/gm, function() { return 'a=ice-ufrag:' + ufrag; });
 							sdp = sdp.replace(/^a=ice-pwd:.*$/gm, function() { return 'a=ice-pwd:' + pwd; });
 						}
-						return peerConnection.setLocalDescription({
+						var local = {
 							sdp: sdp,
 							type: type == 'pranswer' ? type : description.type,
+						};
+						// A browser starts gathering when the description is applied, so it is held back
+						if(peerConnection.rtcDisableAutoGathering) {
+							peerConnection.rtcPendingDescription = local;
+							return local;
+						}
+						return peerConnection.setLocalDescription(local).then(function() {
+							return peerConnection.localDescription;
 						});
 					})
 					// Not a trailing catch, so a throwing user callback is not reported as a rejected description
-					.then(function() {
+					.then(function(desc) {
 						if(peerConnection.rtcUserDeleted) return;
 						if(!peerConnection.rtcDescriptionCallback) return;
-						var desc = peerConnection.localDescription;
 						var pSdp = stringToNewUTF8(desc.sdp);
 						var pType = stringToNewUTF8(desc.type);
 						var callback =  peerConnection.rtcDescriptionCallback;
@@ -118,6 +128,38 @@
 						if(!answering) peerConnection.rtcNegotiationNeeded = true;
 						WEBRTC.handleDescriptionError(peerConnection, err);
 					});
+			},
+
+			applyPendingDescription: function(peerConnection) {
+				var pending = peerConnection.rtcPendingDescription;
+				peerConnection.rtcPendingDescription = null;
+				if(!pending) return Promise.resolve();
+				return peerConnection.setLocalDescription(pending).catch(function(err) {
+					// The browser does not signal again for an offer that was never applied
+					if(pending.type == 'offer') peerConnection.rtcNegotiationNeeded = true;
+					throw err;
+				});
+			},
+
+			readIceServers: function(pUrls, pUsernames, pPasswords, nIceServers) {
+				var iceServers = [];
+				for(var i = 0; i < nIceServers; ++i) {
+					var url = UTF8ToString(HEAPU32[(pUrls >> 2) + i]);
+					var username = UTF8ToString(HEAPU32[(pUsernames >> 2) + i]);
+					var password = UTF8ToString(HEAPU32[(pPasswords >> 2) + i]);
+					if (username == "") {
+						iceServers.push({
+							urls: [url],
+						});
+					} else {
+						iceServers.push({
+							urls: [url],
+							username: username,
+							credential: password
+						});
+					}
+				}
+				return iceServers;
 			},
 
 			handleDescriptionError: function(peerConnection, err) {
@@ -213,32 +255,16 @@
 			},
 		},
 
-		rtcCreatePeerConnection: function(pUrls, pUsernames, pPasswords, nIceServers, relayOnly, disableAutoNegotiation) {
+		rtcCreatePeerConnection: function(pUrls, pUsernames, pPasswords, nIceServers, relayOnly, disableAutoNegotiation, disableAutoGathering) {
 			if(!window.RTCPeerConnection) return 0;
-			var iceServers = [];
-			for(var i = 0; i < nIceServers; ++i) {
-				var url = UTF8ToString(HEAPU32[(pUrls >> 2) + i]);
-				var username = UTF8ToString(HEAPU32[(pUsernames >> 2) + i]);
-				var password = UTF8ToString(HEAPU32[(pPasswords >> 2) + i]);
-				if (username == "") {
-					iceServers.push({
-						urls: [url],
-					});
-				} else {
-					iceServers.push({
-						urls: [url],
-						username: username,
-						credential: password
-					});
-				}
-			}
 			var config = {
-				iceServers: iceServers,
+				iceServers: WEBRTC.readIceServers(pUrls, pUsernames, pPasswords, nIceServers),
 				iceTransportPolicy: relayOnly ? 'relay' : 'all',
 			};
 			try {
 				var peerConnection = new RTCPeerConnection(config);
 				peerConnection.rtcDisableAutoNegotiation = disableAutoNegotiation;
+				peerConnection.rtcDisableAutoGathering = disableAutoGathering;
 				return WEBRTC.registerPeerConnection(peerConnection);
 			} catch(err) {
 				console.error(err);
@@ -258,7 +284,7 @@
 		rtcGetLocalDescription: function(pc) {
 			if(!pc) return 0;
 			var peerConnection = WEBRTC.peerConnectionsMap[pc];
-			var localDescription = peerConnection.localDescription;
+			var localDescription = peerConnection.rtcPendingDescription || peerConnection.localDescription;
 			if(!localDescription) return 0;
 			var sdp = stringToNewUTF8(localDescription.sdp);
 			// sdp should be freed later in c++.
@@ -268,7 +294,7 @@
 		rtcGetLocalDescriptionType: function(pc) {
 			if(!pc) return 0;
 			var peerConnection = WEBRTC.peerConnectionsMap[pc];
-			var localDescription = peerConnection.localDescription;
+			var localDescription = peerConnection.rtcPendingDescription || peerConnection.localDescription;
 			if(!localDescription) return 0;
 			var type = stringToNewUTF8(localDescription.type);
 			// type should be freed later in c++.
@@ -314,7 +340,8 @@
 			try {
 				var dc = WEBRTC.registerDataChannel(peerConnection.createDataChannel(label, datachannelInit));
 				// The browser event comes too late for a local description set right after this call
-				if(!peerConnection.localDescription) peerConnection.rtcNegotiationNeeded = true;
+				if(!peerConnection.localDescription && !peerConnection.rtcPendingDescription)
+					peerConnection.rtcNegotiationNeeded = true;
 				return dc;
 			} catch(err) {
 				console.error(err);
@@ -385,7 +412,11 @@
 			};
 			var peerConnection = WEBRTC.peerConnectionsMap[pc];
 			WEBRTC.enqueueDescription(peerConnection, function() {
-				return peerConnection.setRemoteDescription(description)
+				// A remote description cannot be applied while the local one it responds to is held back
+				return WEBRTC.applyPendingDescription(peerConnection)
+					.then(function() {
+						return peerConnection.setRemoteDescription(description);
+					})
 					.then(function() {
 						if(peerConnection.rtcUserDeleted) return;
 						if(description.type == 'offer' && !peerConnection.rtcDisableAutoNegotiation)
@@ -403,12 +434,36 @@
 			var peerConnection = WEBRTC.peerConnectionsMap[pc];
 			WEBRTC.enqueueDescription(peerConnection, function() {
 				if(type != 'rollback') return WEBRTC.setLocalDescription(peerConnection, type, ufrag, pwd);
+				if(peerConnection.rtcPendingDescription && peerConnection.rtcPendingDescription.type == 'offer') {
+					peerConnection.rtcPendingDescription = null;
+					peerConnection.rtcNegotiationNeeded = true;
+					return;
+				}
 				// In any other state a rollback would be rejected or would drop the remote offer
 				if(peerConnection.signalingState == 'have-local-offer') {
 					return peerConnection.setLocalDescription({type: 'rollback'}).then(function() {
 						peerConnection.rtcNegotiationNeeded = true;
 					});
 				}
+			});
+		},
+
+		rtcGatherLocalCandidates: function(pc, pUrls, pUsernames, pPasswords, nIceServers) {
+			var peerConnection = WEBRTC.peerConnectionsMap[pc];
+			var iceServers = WEBRTC.readIceServers(pUrls, pUsernames, pPasswords, nIceServers);
+			WEBRTC.enqueueDescription(peerConnection, function() {
+				if(iceServers.length) {
+					try {
+						var config = peerConnection.getConfiguration();
+						config.iceServers = (config.iceServers || []).concat(iceServers);
+						peerConnection.setConfiguration(config);
+					} catch(err) {
+						console.error(err);
+					}
+				}
+				return WEBRTC.applyPendingDescription(peerConnection).catch(function(err) {
+					WEBRTC.handleDescriptionError(peerConnection, err);
+				});
 			});
 		},
 

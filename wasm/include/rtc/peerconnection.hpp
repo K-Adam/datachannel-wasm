@@ -96,6 +96,7 @@ public:
 
 	void setLocalDescription(Description::Type type = Description::Type::Unspec,
 	                         LocalDescriptionInit init = {});
+	void gatherLocalCandidates(std::vector<IceServer> additionalIceServers = {});
 	void setRemoteDescription(const Description &description);
 	void addRemoteCandidate(const Candidate &candidate);
 
