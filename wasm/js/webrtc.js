@@ -32,13 +32,8 @@
 				var pc = WEBRTC.nextId++;
 				WEBRTC.peerConnectionsMap[pc] = peerConnection;
 				peerConnection.onnegotiationneeded = function() {
-					peerConnection.createOffer()
-						.then(function(offer) {
-							return WEBRTC.handleDescription(peerConnection, offer);
-						})
-						.catch(function(err) {
-							console.error(err);
-						});
+					// An automatic offer may lose a race against a remote offer, which is not a failure
+					WEBRTC.handleDescription(peerConnection, peerConnection.createOffer(), true);
 				};
 				peerConnection.onicecandidate = function(evt) {
 					if(evt.candidate && evt.candidate.candidate)
@@ -66,8 +61,12 @@
 				return dc;
 			},
 
-			handleDescription: function(peerConnection, description) {
-				return peerConnection.setLocalDescription(description)
+			handleDescription: function(peerConnection, creating, logOnly) {
+				creating
+					.then(function(description) {
+						return peerConnection.setLocalDescription(description);
+					})
+					// Not a trailing catch, so a throwing user callback is not reported as a rejected description
 					.then(function() {
 						if(peerConnection.rtcUserDeleted) return;
 						if(!peerConnection.rtcDescriptionCallback) return;
@@ -79,7 +78,21 @@
 						{{{ makeDynCall('viii', 'callback') }}} (pSdp, pType, userPointer);
 						_free(pSdp);
 						_free(pType);
+					}, function(err) {
+						if(logOnly) console.error(err);
+						else WEBRTC.handleDescriptionError(peerConnection, err);
+					})
+					.catch(function(err) {
+						console.error(err);
 					});
+			},
+
+			handleDescriptionError: function(peerConnection, err) {
+				if(peerConnection.rtcUserDeleted) return;
+				console.error(err);
+				// A rejected renegotiation leaves an established connection working
+				if(peerConnection.connectionState != 'connected')
+					WEBRTC.handleConnectionStateChange(peerConnection, 'failed');
 			},
 
 			handleCandidate: function(peerConnection, candidate) {
@@ -96,6 +109,9 @@
 
 			handleConnectionStateChange: function(peerConnection, connectionState) {
 				if(peerConnection.rtcUserDeleted) return;
+				// The browser may later report a failure already reported for a rejected description
+				if(peerConnection.rtcReportedState == connectionState) return;
+				peerConnection.rtcReportedState = connectionState;
 				if(!peerConnection.rtcStateChangeCallback) return;
 				var map = {
 					'new': 0,
@@ -318,26 +334,19 @@
 		},
 
 		rtcSetRemoteDescription: function(pc, pSdp, pType) {
-			var description = new RTCSessionDescription({
+			// A plain dictionary makes an invalid type reject the promise instead of throwing
+			var description = {
 				sdp: UTF8ToString(pSdp),
 				type: UTF8ToString(pType),
-			});
+			};
 			var peerConnection = WEBRTC.peerConnectionsMap[pc];
 			peerConnection.setRemoteDescription(description)
 				.then(function() {
 					if(peerConnection.rtcUserDeleted) return;
-					if(description.type == 'offer') {
-						peerConnection.createAnswer()
-							.then(function(answer) {
-								return WEBRTC.handleDescription(peerConnection, answer);
-							})
-							.catch(function(err) {
-								console.error(err);
-							});
-					}
-				})
-				.catch(function(err) {
-					console.error(err);
+					if(description.type == 'offer')
+						WEBRTC.handleDescription(peerConnection, peerConnection.createAnswer());
+				}, function(err) {
+					WEBRTC.handleDescriptionError(peerConnection, err);
 				});
 		},
 
