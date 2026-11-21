@@ -29,8 +29,9 @@
 #include <memory>
 
 extern "C" {
-extern int wsCreateWebSocket(const char *url);
+extern int wsCreateWebSocket(const char *url, const char *protocols);
 extern void wsDeleteWebSocket(int ws);
+extern void wsCloseWebSocket(int ws);
 extern void wsSetOpenCallback(int ws, void (*openCallback)(void *));
 extern void wsSetErrorCallback(int ws, void (*errorCallback)(const char *, void *));
 extern void wsSetMessageCallback(int ws, void (*messageCallback)(const char *, int, void *));
@@ -65,22 +66,27 @@ void WebSocket::MessageCallback(const char *data, int size, void *ptr) {
 				w->triggerMessage(string(data));
 			}
 		} else {
-			w->close();
+			w->remove();
 			w->triggerClosed();
 		}
 	}
 }
 
-WebSocket::WebSocket() : mId(0), mConnected(false) {}
+WebSocket::WebSocket() : WebSocket(Configuration()) {}
 
-WebSocket::~WebSocket() { close(); }
+WebSocket::WebSocket(Configuration config) : mId(0), mConnected(false) {
+	for (const string &protocol : config.protocols)
+		mProtocols += (mProtocols.empty() ? "" : ",") + protocol;
+}
+
+WebSocket::~WebSocket() { remove(); }
 
 void WebSocket::open(const string &url) {
-	close();
+	remove();
 
-	mId = wsCreateWebSocket(url.c_str());
+	mId = wsCreateWebSocket(url.c_str(), mProtocols.c_str());
 	if (!mId)
-		throw std::runtime_error("WebSocket not supported");
+		throw std::runtime_error("WebSocket creation failed");
 
 	wsSetUserPointer(mId, this);
 	wsSetOpenCallback(mId, OpenCallback);
@@ -89,6 +95,12 @@ void WebSocket::open(const string &url) {
 }
 
 void WebSocket::close() {
+	mConnected = false;
+	if (mId)
+		wsCloseWebSocket(mId);
+}
+
+void WebSocket::remove() {
 	mConnected = false;
 	if (mId) {
 		wsDeleteWebSocket(mId);

@@ -25,6 +25,7 @@
 
 #include "common.hpp"
 
+#include <chrono>
 #include <vector>
 
 namespace rtc {
@@ -97,6 +98,22 @@ struct Configuration {
 	optional<string> certificatePemFile;
 	optional<string> keyPemFile;
 	optional<string> keyPemPass;
+};
+
+// Mirrors libdatachannel like Configuration. A browser only honors protocols.
+struct WebSocketConfiguration {
+	bool disableTlsVerification = false;
+	optional<ProxyServer> proxyServer;
+	std::vector<string> protocols;
+	optional<std::chrono::milliseconds> tcpConnectionTimeout;
+	optional<std::chrono::milliseconds> connectionTimeout;
+	optional<std::chrono::milliseconds> pingInterval;
+	optional<int> maxOutstandingPings;
+	optional<string> caCertificatePemFile;
+	optional<string> certificatePemFile;
+	optional<string> keyPemFile;
+	optional<string> keyPemPass;
+	optional<size_t> maxMessageSize;
 };
 
 } // namespace rtc

@@ -35,10 +35,24 @@
 			},
 		},
 
-		wsCreateWebSocket: function(pUrl) {
+		wsCreateWebSocket: function(pUrl, pProtocols) {
 			var url = UTF8ToString(pUrl);
+			var protocols = UTF8ToString(pProtocols);
 			if(!window.WebSocket) return 0;
-			return WEBSOCKET.registerWebSocket(new WebSocket(url));
+			try {
+				// Browsers reject an empty protocol name
+				return WEBSOCKET.registerWebSocket(new WebSocket(url, protocols ? protocols.split(',') : []));
+			} catch(err) {
+				console.error(err);
+				return 0;
+			}
+		},
+
+		wsCloseWebSocket: function(ws) {
+			var webSocket = WEBSOCKET.map[ws];
+			if(!webSocket) return;
+			webSocket.rtcUserClosed = true;
+			webSocket.close();
 		},
 
 		wsDeleteWebSocket: function(ws) {
@@ -65,12 +79,11 @@
  		wsSetErrorCallback: function(ws, errorCallback) {
 			if (!ws) return;
 			var webSocket = WEBSOCKET.map[ws];
-			var cb = function() {
-				if(webSocket.rtcUserDeleted) return;
-				var userPointer = webSocket.rtcUserPointer || 0;
-        {{{ makeDynCall('vii', 'errorCallback') }}} (0, userPointer);
+			webSocket.rtcErrorCallback = errorCallback;
+			// Browsers give no detail on error events, so the error is reported from the close event
+			webSocket.onerror = function() {
+				webSocket.rtcErrored = true;
 			};
-			webSocket.onerror = cb;
 		},
 
 		wsSetMessageCallback: function(ws, messageCallback) {
@@ -93,9 +106,17 @@
 					_free(pBuffer);
 				}
 			};
-			webSocket.onclose = function() {
+			webSocket.onclose = function(evt) {
 				if(webSocket.rtcUserDeleted) return;
 				var userPointer = webSocket.rtcUserPointer || 0;
+				var errorCallback = webSocket.rtcErrorCallback;
+				if(webSocket.rtcErrored && !webSocket.rtcUserClosed) {
+					var reason = evt.reason ? ': ' + evt.reason : '';
+					var pError = stringToNewUTF8('WebSocket closed with code ' + evt.code + reason);
+					{{{ makeDynCall('vii', 'errorCallback') }}} (pError, userPointer);
+					_free(pError);
+					if(webSocket.rtcUserDeleted) return;
+				}
 				{{{ makeDynCall('viii', 'messageCallback') }}} (0, 0, userPointer);
 			};
 		},

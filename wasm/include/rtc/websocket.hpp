@@ -25,6 +25,7 @@
 
 #include "channel.hpp"
 #include "common.hpp"
+#include "configuration.hpp"
 
 namespace rtc {
 
@@ -38,7 +39,10 @@ public:
 		Closed = 3,
 	};
 
+	using Configuration = WebSocketConfiguration;
+
 	WebSocket();
+	WebSocket(Configuration config);
 	~WebSocket();
 
 	void open(const string &url);
@@ -55,9 +59,11 @@ public:
 
 private:
 	void triggerOpen() override;
+	void remove();
 
 	int mId;
 	bool mConnected;
+	string mProtocols;
 
 	static void OpenCallback(void *ptr);
 	static void ErrorCallback(const char *error, void *ptr);
