@@ -31,7 +31,8 @@
 
 extern "C" {
 extern int rtcCreatePeerConnection(const char **pUrls, const char **pUsernames,
-                                   const char **pPasswords, int nIceServers, bool relayOnly);
+                                   const char **pPasswords, int nIceServers, bool relayOnly,
+                                   bool disableAutoNegotiation);
 extern void rtcDeletePeerConnection(int pc);
 extern char *rtcGetLocalDescription(int pc);
 extern char *rtcGetLocalDescriptionType(int pc);
@@ -52,6 +53,7 @@ extern void rtcSetGatheringStateChangeCallback(int pc,
                                                void (*gatheringStateChangeCallback)(int, void *));
 extern void rtcSetSignalingStateChangeCallback(int pc,
                                                void (*signalingStateChangeCallback)(int, void *));
+extern void rtcSetLocalDescription(int pc, const char *type, const char *ufrag, const char *pwd);
 extern void rtcSetRemoteDescription(int pc, const char *sdp, const char *type);
 extern void rtcAddRemoteCandidate(int pc, const char *candidate, const char *mid);
 extern void rtcSetUserPointer(int i, void *ptr);
@@ -145,7 +147,8 @@ PeerConnection::PeerConnection(Configuration config) {
 	}
 	mId = rtcCreatePeerConnection(url_ptrs.data(), username_ptrs.data(), password_ptrs.data(),
 	                              config.iceServers.size(),
-	                              config.iceTransportPolicy == TransportPolicy::Relay);
+	                              config.iceTransportPolicy == TransportPolicy::Relay,
+	                              config.disableAutoNegotiation);
 	if (!mId)
 		throw std::runtime_error("Peer connection creation failed");
 
@@ -230,6 +233,14 @@ shared_ptr<DataChannel> PeerConnection::createDataChannel(const string &label,
 		throw std::runtime_error("Data channel creation failed");
 
 	return std::make_shared<DataChannel>(dc);
+}
+
+void PeerConnection::setLocalDescription(Description::Type type, LocalDescriptionInit init) {
+	if (!mId)
+		throw std::runtime_error("Peer connection is closed");
+
+	rtcSetLocalDescription(mId, Description::typeToString(type).c_str(),
+	                       init.iceUfrag.value_or("").c_str(), init.icePwd.value_or("").c_str());
 }
 
 void PeerConnection::setRemoteDescription(const Description &description) {

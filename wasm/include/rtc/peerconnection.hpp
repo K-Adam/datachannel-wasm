@@ -43,6 +43,11 @@ struct DataChannelInit {
 	string protocol = "";
 };
 
+struct LocalDescriptionInit {
+	optional<string> iceUfrag;
+	optional<string> icePwd;
+};
+
 class PeerConnection final {
 public:
 	enum class State : int {
@@ -89,6 +94,8 @@ public:
 
 	shared_ptr<DataChannel> createDataChannel(const string &label, DataChannelInit init = {});
 
+	void setLocalDescription(Description::Type type = Description::Type::Unspec,
+	                         LocalDescriptionInit init = {});
 	void setRemoteDescription(const Description &description);
 	void addRemoteCandidate(const Candidate &candidate);
 
