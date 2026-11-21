@@ -38,7 +38,8 @@ extern char *rtcGetLocalDescriptionType(int pc);
 extern char *rtcGetRemoteDescription(int pc);
 extern char *rtcGetRemoteDescriptionType(int pc);
 extern int rtcCreateDataChannel(int pc, const char *label, bool unordered, int maxRetransmits,
-                                int maxPacketLifeTime);
+                                int maxPacketLifeTime, bool negotiated, int id,
+                                const char *protocol);
 extern void rtcSetDataChannelCallback(int pc, void (*dataChannelCallback)(int, void *));
 extern void rtcSetLocalDescriptionCallback(int pc,
                                            void (*descriptionCallback)(const char *, const char *,
@@ -219,8 +220,13 @@ shared_ptr<DataChannel> PeerConnection::createDataChannel(const string &label,
 	int maxPacketLifeTime =
 	    reliability.maxPacketLifeTime ? int(reliability.maxPacketLifeTime->count()) : -1;
 
-	return std::make_shared<DataChannel>(rtcCreateDataChannel(
-	    mId, label.c_str(), init.reliability.unordered, maxRetransmits, maxPacketLifeTime));
+	int dc = rtcCreateDataChannel(mId, label.c_str(), reliability.unordered, maxRetransmits,
+	                              maxPacketLifeTime, init.negotiated, init.id ? int(*init.id) : -1,
+	                              init.protocol.c_str());
+	if (!dc)
+		throw std::runtime_error("Data channel creation failed");
+
+	return std::make_shared<DataChannel>(dc);
 }
 
 void PeerConnection::setRemoteDescription(const Description &description) {

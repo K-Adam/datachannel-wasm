@@ -41,7 +41,9 @@ public:
 	bool isOpen() const override;
 	bool isClosed() const override;
 	size_t bufferedAmount() const override;
+	optional<uint16_t> id() const;
 	string label() const;
+	string protocol() const;
 	Reliability reliability() const;
 
 	void setBufferedAmountLowThreshold(size_t amount) override;

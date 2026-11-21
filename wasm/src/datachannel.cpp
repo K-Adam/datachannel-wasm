@@ -25,6 +25,7 @@
 #include <emscripten/emscripten.h>
 
 #include <chrono>
+#include <cstdlib>
 #include <exception>
 #include <stdexcept>
 
@@ -32,6 +33,8 @@ extern "C" {
 extern void rtcDeleteDataChannel(int dc);
 extern void rtcCloseDataChannel(int dc);
 extern int rtcGetDataChannelLabel(int dc, char *buffer, int size);
+extern int rtcGetDataChannelId(int dc);
+extern char *rtcGetDataChannelProtocol(int dc);
 extern int rtcGetDataChannelUnordered(int dc);
 extern int rtcGetDataChannelMaxPacketLifeTime(int dc);
 extern int rtcGetDataChannelMaxRetransmits(int dc);
@@ -142,7 +145,19 @@ size_t DataChannel::bufferedAmount() const {
 	return size_t(ret);
 }
 
+optional<uint16_t> DataChannel::id() const {
+	int id = rtcGetDataChannelId(mId);
+	return id >= 0 ? std::make_optional(uint16_t(id)) : nullopt;
+}
+
 std::string DataChannel::label() const { return mLabel; }
+
+string DataChannel::protocol() const {
+	char *protocol = rtcGetDataChannelProtocol(mId);
+	string result(protocol ? protocol : "");
+	free(protocol);
+	return result;
+}
 
 Reliability DataChannel::reliability() const {
 	Reliability reliability = {};

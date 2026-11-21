@@ -38,6 +38,9 @@ namespace rtc {
 
 struct DataChannelInit {
 	Reliability reliability = {};
+	bool negotiated = false;
+	optional<uint16_t> id = nullopt;
+	string protocol = "";
 };
 
 class PeerConnection final {
