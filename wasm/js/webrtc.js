@@ -255,6 +255,7 @@
 			},
 		},
 
+		rtcCreatePeerConnection__sig: 'ipppiiii',
 		rtcCreatePeerConnection: function(pUrls, pUsernames, pPasswords, nIceServers, relayOnly, disableAutoNegotiation, disableAutoGathering) {
 			if(!window.RTCPeerConnection) return 0;
 			var config = {
@@ -272,6 +273,7 @@
 			}
 		},
 
+		rtcDeletePeerConnection__sig: 'vi',
 		rtcDeletePeerConnection: function(pc) {
 			var peerConnection = WEBRTC.peerConnectionsMap[pc];
 			if(peerConnection) {
@@ -281,6 +283,7 @@
 			}
 		},
 
+		rtcGetLocalDescription__sig: 'pi',
 		rtcGetLocalDescription: function(pc) {
 			if(!pc) return 0;
 			var peerConnection = WEBRTC.peerConnectionsMap[pc];
@@ -291,6 +294,7 @@
 			return sdp;
 		},
 
+		rtcGetLocalDescriptionType__sig: 'pi',
 		rtcGetLocalDescriptionType: function(pc) {
 			if(!pc) return 0;
 			var peerConnection = WEBRTC.peerConnectionsMap[pc];
@@ -301,6 +305,7 @@
 			return type;
 		},
 
+		rtcGetRemoteDescription__sig: 'pi',
 		rtcGetRemoteDescription: function(pc) {
 			if(!pc) return 0;
 			var peerConnection = WEBRTC.peerConnectionsMap[pc];
@@ -311,6 +316,7 @@
 			return sdp;
 		},
 
+		rtcGetRemoteDescriptionType__sig: 'pi',
 		rtcGetRemoteDescriptionType: function(pc) {
 			if(!pc) return 0;
 			var peerConnection = WEBRTC.peerConnectionsMap[pc];
@@ -321,6 +327,7 @@
 			return type;
 		},
 
+		rtcGetRemoteAddress__sig: 'pi',
 		rtcGetRemoteAddress: function(pc) {
 			if(!pc) return 0;
 			var sctp = WEBRTC.peerConnectionsMap[pc].sctp;
@@ -330,6 +337,7 @@
 			return stringToNewUTF8(pair.remote.address + ':' + pair.remote.port);
 		},
 
+		rtcCreateDataChannel__sig: 'iipiiiiip',
 		rtcCreateDataChannel: function(pc, pLabel, unordered, maxRetransmits, maxPacketLifeTime, negotiated, id, pProtocol) {
 			if(!pc) return 0;
 			var label = UTF8ToString(pLabel);
@@ -358,6 +366,7 @@
 			}
 		},
 
+ 		rtcDeleteDataChannel__sig: 'vi',
  		rtcDeleteDataChannel: function(dc) {
 			var dataChannel = WEBRTC.dataChannelsMap[dc];
 			if(dataChannel) {
@@ -366,6 +375,7 @@
 			}
 		},
 
+		rtcSetDataChannelCallback__sig: 'vip',
 		rtcSetDataChannelCallback: function(pc, dataChannelCallback) {
 			if(!pc) return;
 			var peerConnection = WEBRTC.peerConnectionsMap[pc];
@@ -377,42 +387,49 @@
 			};
 		},
 
+		rtcSetLocalDescriptionCallback__sig: 'vip',
 		rtcSetLocalDescriptionCallback: function(pc, descriptionCallback) {
 			if(!pc) return;
 			var peerConnection = WEBRTC.peerConnectionsMap[pc];
 			peerConnection.rtcDescriptionCallback = descriptionCallback;
 		},
 
+		rtcSetLocalCandidateCallback__sig: 'vip',
 		rtcSetLocalCandidateCallback: function(pc, candidateCallback) {
 			if(!pc) return;
 			var peerConnection = WEBRTC.peerConnectionsMap[pc];
 			peerConnection.rtcCandidateCallback = candidateCallback;
 		},
 
+		rtcSetStateChangeCallback__sig: 'vip',
 		rtcSetStateChangeCallback: function(pc, stateChangeCallback) {
 			if(!pc) return;
 			var peerConnection = WEBRTC.peerConnectionsMap[pc];
 			peerConnection.rtcStateChangeCallback = stateChangeCallback;
 		},
 
+		rtcSetIceStateChangeCallback__sig: 'vip',
 		rtcSetIceStateChangeCallback: function(pc, iceStateChangeCallback) {
 			if(!pc) return;
 			var peerConnection = WEBRTC.peerConnectionsMap[pc];
 			peerConnection.rtcIceStateChangeCallback = iceStateChangeCallback;
 		},
 
+		rtcSetGatheringStateChangeCallback__sig: 'vip',
 		rtcSetGatheringStateChangeCallback: function(pc, gatheringStateChangeCallback) {
 			if(!pc) return;
 			var peerConnection = WEBRTC.peerConnectionsMap[pc];
 			peerConnection.rtcGatheringStateChangeCallback = gatheringStateChangeCallback;
 		},
 
+		rtcSetSignalingStateChangeCallback__sig: 'vip',
 		rtcSetSignalingStateChangeCallback: function(pc, signalingStateChangeCallback) {
 			if(!pc) return;
 			var peerConnection = WEBRTC.peerConnectionsMap[pc];
 			peerConnection.rtcSignalingStateChangeCallback = signalingStateChangeCallback;
 		},
 
+		rtcSetRemoteDescription__sig: 'vipp',
 		rtcSetRemoteDescription: function(pc, pSdp, pType) {
 			// A plain dictionary makes an invalid type reject the promise instead of throwing
 			var description = {
@@ -436,6 +453,7 @@
 			});
 		},
 
+		rtcSetLocalDescription__sig: 'vippp',
 		rtcSetLocalDescription: function(pc, pType, pUfrag, pPwd) {
 			var type = UTF8ToString(pType);
 			var ufrag = UTF8ToString(pUfrag);
@@ -457,6 +475,7 @@
 			});
 		},
 
+		rtcGatherLocalCandidates__sig: 'vipppi',
 		rtcGatherLocalCandidates: function(pc, pUrls, pUsernames, pPasswords, nIceServers) {
 			var peerConnection = WEBRTC.peerConnectionsMap[pc];
 			var iceServers = WEBRTC.readIceServers(pUrls, pUsernames, pPasswords, nIceServers);
@@ -476,6 +495,7 @@
 			});
 		},
 
+		rtcAddRemoteCandidate__sig: 'vipp',
 		rtcAddRemoteCandidate: function(pc, pCandidate, pSdpMid) {
 			var iceCandidate = new RTCIceCandidate({
 				candidate: UTF8ToString(pCandidate),
@@ -488,12 +508,14 @@
 			});
 		},
 
+		rtcCloseDataChannel__sig: 'vi',
 		rtcCloseDataChannel: function(dc) {
 			if (!dc) return;
 			var dataChannel = WEBRTC.dataChannelsMap[dc];
 			dataChannel.close();
 		},
 
+		rtcGetDataChannelLabel__sig: 'iipi',
 		rtcGetDataChannelLabel: function(dc, pBuffer, size) {
 			if(!dc) return 0;
 			var label = WEBRTC.dataChannelsMap[dc].label;
@@ -501,41 +523,48 @@
 			return lengthBytesUTF8(label);
 		},
 
+		rtcGetDataChannelId__sig: 'ii',
 		rtcGetDataChannelId: function(dc) {
 			if(!dc) return -1;
 			var id = WEBRTC.dataChannelsMap[dc].id;
 			return id != null ? id : -1;
 		},
 
+		rtcGetDataChannelProtocol__sig: 'pi',
 		rtcGetDataChannelProtocol: function(dc) {
 			if(!dc) return 0;
 			return stringToNewUTF8(WEBRTC.dataChannelsMap[dc].protocol);
 		},
 
+		rtcGetDataChannelClosed__sig: 'ii',
 		rtcGetDataChannelClosed: function(dc) {
 			var dataChannel = WEBRTC.dataChannelsMap[dc];
 			// libdatachannel reports a channel as closed as soon as close is called
 			return !dataChannel || dataChannel.readyState == 'closing' || dataChannel.readyState == 'closed';
 		},
 
+		rtcGetDataChannelUnordered__sig: 'ii',
 		rtcGetDataChannelUnordered: function(dc) {
 			if(!dc) return 0;
 			var dataChannel = WEBRTC.dataChannelsMap[dc];
 			return dataChannel.ordered ? 0 : 1;
 		},
 
+		rtcGetDataChannelMaxPacketLifeTime__sig: 'ii',
 		rtcGetDataChannelMaxPacketLifeTime: function(dc) {
 			if(!dc) return -1;
 			var dataChannel = WEBRTC.dataChannelsMap[dc];
 			return dataChannel.maxPacketLifeTime !== null ? dataChannel.maxPacketLifeTime : -1;
 		},
 
+		rtcGetDataChannelMaxRetransmits__sig: 'ii',
 		rtcGetDataChannelMaxRetransmits: function(dc) {
 			if(!dc) return -1;
 			var dataChannel = WEBRTC.dataChannelsMap[dc];
 			return dataChannel.maxRetransmits !== null ? dataChannel.maxRetransmits : -1;
 		},
 
+		rtcSetOpenCallback__sig: 'vip',
 		rtcSetOpenCallback: function(dc, openCallback) {
 			if(!dc) return;
 			var dataChannel = WEBRTC.dataChannelsMap[dc];
@@ -549,6 +578,7 @@
 			else dataChannel.onopen = cb;
 		},
 
+		rtcSetErrorCallback__sig: 'vip',
 		rtcSetErrorCallback: function(dc, errorCallback) {
 			if(!dc) return;
 			var dataChannel = WEBRTC.dataChannelsMap[dc];
@@ -563,6 +593,7 @@
 			dataChannel.onerror = cb;
 		},
 
+		rtcSetMessageCallback__sig: 'vip',
 		rtcSetMessageCallback: function(dc, messageCallback) {
 			if(!dc) return;
 			var dataChannel = WEBRTC.dataChannelsMap[dc];
@@ -589,6 +620,7 @@
 			};
 		},
 
+		rtcSetBufferedAmountLowCallback__sig: 'vip',
 		rtcSetBufferedAmountLowCallback: function(dc, bufferedAmountLowCallback) {
 			if(!dc) return;
 			var dataChannel = WEBRTC.dataChannelsMap[dc];
@@ -600,18 +632,21 @@
 			dataChannel.onbufferedamountlow = cb;
 		},
 
+		rtcGetBufferedAmount__sig: 'ii',
 		rtcGetBufferedAmount: function(dc) {
 			if(!dc) return 0;
 			var dataChannel = WEBRTC.dataChannelsMap[dc];
 			return dataChannel.bufferedAmount;
 		},
 
+		rtcSetBufferedAmountLowThreshold__sig: 'vii',
 		rtcSetBufferedAmountLowThreshold: function(dc, threshold) {
 			if(!dc) return;
 			var dataChannel = WEBRTC.dataChannelsMap[dc];
 			dataChannel.bufferedAmountLowThreshold = threshold;
 		},
 
+		rtcSendMessage__sig: 'iipi',
 		rtcSendMessage: function(dc, pBuffer, size) {
 			if(!dc) return -1;
 			var dataChannel = WEBRTC.dataChannelsMap[dc];
@@ -633,6 +668,7 @@
 			}
 		},
 
+		rtcSetUserPointer__sig: 'vip',
 		rtcSetUserPointer: function(i, ptr) {
 			if(WEBRTC.peerConnectionsMap[i]) WEBRTC.peerConnectionsMap[i].rtcUserPointer = ptr;
 			if(WEBRTC.dataChannelsMap[i]) WEBRTC.dataChannelsMap[i].rtcUserPointer = ptr;

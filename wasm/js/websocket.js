@@ -35,6 +35,7 @@
 			},
 		},
 
+		wsCreateWebSocket__sig: 'ipp',
 		wsCreateWebSocket: function(pUrl, pProtocols) {
 			var url = UTF8ToString(pUrl);
 			var protocols = UTF8ToString(pProtocols);
@@ -48,6 +49,7 @@
 			}
 		},
 
+		wsCloseWebSocket__sig: 'vi',
 		wsCloseWebSocket: function(ws) {
 			var webSocket = WEBSOCKET.map[ws];
 			if(!webSocket) return;
@@ -55,6 +57,7 @@
 			webSocket.close();
 		},
 
+		wsDeleteWebSocket__sig: 'vi',
 		wsDeleteWebSocket: function(ws) {
 			var webSocket = WEBSOCKET.map[ws];
 			if(webSocket) {
@@ -64,6 +67,7 @@
 			}
 		},
 
+		wsSetOpenCallback__sig: 'vip',
 		wsSetOpenCallback: function(ws, openCallback) {
 			if (!ws) return;
 			var webSocket = WEBSOCKET.map[ws];
@@ -76,6 +80,7 @@
 			if(webSocket.readyState == 1) setTimeout(cb, 0);
 		},
 
+ 		wsSetErrorCallback__sig: 'vip',
  		wsSetErrorCallback: function(ws, errorCallback) {
 			if (!ws) return;
 			var webSocket = WEBSOCKET.map[ws];
@@ -86,6 +91,7 @@
 			};
 		},
 
+		wsSetMessageCallback__sig: 'vip',
 		wsSetMessageCallback: function(ws, messageCallback) {
 			if (!ws) return;
 			var webSocket = WEBSOCKET.map[ws];
@@ -121,6 +127,7 @@
 			};
 		},
 
+		wsSendMessage__sig: 'iipi',
 		wsSendMessage: function(ws, pBuffer, size) {
 			if (!ws) return -1;
 			var webSocket = WEBSOCKET.map[ws];
@@ -142,6 +149,7 @@
 			}
 		},
 
+		wsGetWebSocketUrl__sig: 'pi',
 		wsGetWebSocketUrl: function(ws) {
 			if(!ws) return 0;
 			var webSocket = WEBSOCKET.map[ws];
@@ -150,12 +158,14 @@
 			return url;
 		},
 
+		wsGetWebSocketState__sig: 'ii',
 		wsGetWebSocketState: function(ws) {
 			if(!ws) return WebSocket.CLOSED;
 			var webSocket = WEBSOCKET.map[ws];
 			return webSocket.readyState;
 		},
 
+		wsSetUserPointer__sig: 'vip',
 		wsSetUserPointer: function(ws, ptr) {
 			var webSocket = WEBSOCKET.map[ws];
 			if(webSocket) webSocket.rtcUserPointer = ptr;
